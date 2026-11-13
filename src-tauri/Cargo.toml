@@ -1,6 +1,6 @@
 [package]
 name = "phraseshelf"
-version = "0.5.1"
+version = "0.5.2"
 description = "Tabs of labeled buttons that copy phrases to the clipboard"
 edition = "2021"
 
