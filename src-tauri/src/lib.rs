@@ -161,6 +161,67 @@ fn set_theme(window: tauri::WebviewWindow, theme: String) -> Result<(), String> 
     }
 }
 
+// ---------- updates (desktop) ----------
+
+#[derive(Serialize)]
+struct UpdateInfo {
+    version: String,
+    notes: Option<String>,
+}
+
+/// Asks the release feed whether a newer version exists. None = up to date (or mobile).
+#[tauri::command]
+async fn check_update(app: AppHandle) -> Result<Option<UpdateInfo>, String> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_updater::UpdaterExt;
+        let update = app
+            .updater()
+            .map_err(|e| e.to_string())?
+            .check()
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(update.map(|u| UpdateInfo {
+            version: u.version.clone(),
+            notes: u.body.clone(),
+        }))
+    }
+    #[cfg(mobile)]
+    {
+        let _ = app;
+        Ok(None)
+    }
+}
+
+/// Downloads the update, verifies its signature against the public key in
+/// tauri.conf.json, installs it and restarts the app.
+#[tauri::command]
+async fn install_update(app: AppHandle) -> Result<(), String> {
+    #[cfg(desktop)]
+    {
+        use tauri_plugin_updater::UpdaterExt;
+        let Some(update) = app
+            .updater()
+            .map_err(|e| e.to_string())?
+            .check()
+            .await
+            .map_err(|e| e.to_string())?
+        else {
+            return Ok(());
+        };
+        update
+            .download_and_install(|_, _| {}, || {})
+            .await
+            .map_err(|e| e.to_string())?;
+        app.restart();
+    }
+    #[cfg(mobile)]
+    {
+        let _ = app;
+        Ok(())
+    }
+}
+
 // ---------- import / export ----------
 
 #[derive(Serialize)]
@@ -324,6 +385,9 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)));
 
+    #[cfg(desktop)]
+    let builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+
     let builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -353,7 +417,9 @@ pub fn run() {
             save_export,
             app_version,
             platform,
-            set_theme
+            set_theme,
+            check_update,
+            install_update
         ])
         .run(tauri::generate_context!())
         .expect("error while running PhraseShelf");

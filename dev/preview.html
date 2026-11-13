@@ -49,6 +49,10 @@
           case "save_export": __mock.exported = args; return "C:\\fake\\" + args.fileName;
           case "app_version": return "0.0.0-preview";
           case "set_theme": __mock.theme = args.theme; return;
+          case "platform": return "desktop";
+          // Set __mock.update = { version: "9.9.9" } (then click the version) to see the banner.
+          case "check_update": return __mock.update ?? null;
+          case "install_update": __mock.installed = true; return;
           default: throw new Error("mock: unknown command " + cmd);
         }
       },

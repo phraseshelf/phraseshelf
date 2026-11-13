@@ -48,6 +48,17 @@ Run `PhraseShelf_<version>_x64-setup.exe`. It installs for your Windows account 
 
 `%APPDATA%\app.phraseshelf\data.json` is plain JSON, so you can back it up or edit it by hand. The previous version is kept beside it as `data.json.bak` on every save.
 
+## Releases and updates
+
+Pushing a version tag (e.g. `v0.6.0`) runs [`.github/workflows/release.yml`](.github/workflows/release.yml). It builds:
+- the Windows installer
+- Linux packages (`.deb`, `.rpm`, `.AppImage`)
+- a signed Android APK
+
+Everything goes into a **draft** GitHub Release, which you review and then publish.
+
+The Windows and Linux (AppImage) apps check the latest release on startup and offer to update. Updates are signed, and the app only installs ones that match the public key in `tauri.conf.json`. You can also click the version number in the footer to check for updates.
+
 ## Building
 
 Prerequisites: [Rust](https://rustup.rs) and the Visual Studio C++ Build Tools ("Desktop development with C++"). WebView2 ships with Windows 11.

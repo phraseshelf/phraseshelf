@@ -56,7 +56,9 @@ body {
   flex-direction: column;
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.4 "Segoe UI", "Malgun Gothic", "Yu Gothic UI", "Microsoft YaHei UI", system-ui, sans-serif;
+  font: 14px/1.4 "Segoe UI", "Malgun Gothic", "Yu Gothic UI", "Microsoft YaHei UI",
+    /* Linux */ "Cantarell", "Ubuntu", "Noto Sans", "Noto Sans CJK KR", "Noto Sans CJK JP", "DejaVu Sans",
+    system-ui, sans-serif;
   user-select: none;
 }
 
@@ -227,6 +229,23 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .hint-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .version { flex: none; opacity: 0.8; }
+.version.clickable { cursor: pointer; }
+.version.clickable:hover { opacity: 1; text-decoration: underline; }
+
+.update-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.update-bar[hidden] { display: none; }
+.update-bar .spacer { flex: 1; }
+.tool-btn.primary-btn { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.tool-btn.primary-btn:hover { filter: brightness(1.1); background: var(--accent); color: var(--accent-text); }
+.tool-btn:disabled { opacity: 0.6; cursor: default; }
 
 /* ---------- toast ---------- */
 

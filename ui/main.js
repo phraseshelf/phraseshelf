@@ -60,7 +60,51 @@ async function init() {
   invoke("app_version")
     .then((v) => (els.version.textContent = "v" + v))
     .catch(() => {});
+  invoke("platform")
+    .then((p) => {
+      if (p !== "desktop") return;
+      els.version.classList.add("clickable");
+      els.version.title = "Check for updates";
+      setTimeout(() => checkForUpdates(false), 3000);
+    })
+    .catch(() => {});
 }
+
+// ---------- updates (desktop) ----------
+
+async function checkForUpdates(manual) {
+  let update;
+  try {
+    update = await invoke("check_update");
+  } catch (err) {
+    // Quiet at startup (offline, feed not published yet…); explain only when asked.
+    if (manual) toast("Couldn't check for updates: " + err, true);
+    return;
+  }
+  if (!update) {
+    if (manual) toast("You're on the latest version");
+    return;
+  }
+  $("#update-text").textContent = `PhraseShelf ${update.version} is available.`;
+  $("#update-bar").hidden = false;
+}
+
+els.version.addEventListener("click", () => {
+  if (els.version.classList.contains("clickable")) checkForUpdates(true);
+});
+$("#update-later").addEventListener("click", () => ($("#update-bar").hidden = true));
+$("#update-now").addEventListener("click", async () => {
+  const btn = $("#update-now");
+  btn.disabled = true;
+  btn.textContent = "Downloading…";
+  try {
+    await invoke("install_update"); // the app restarts when done
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = "Update now";
+    toast("Update failed: " + err, true);
+  }
+});
 
 // ---------- theme ----------
 
