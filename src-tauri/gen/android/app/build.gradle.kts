@@ -14,9 +14,27 @@ val tauriProperties = Properties().apply {
     }
 }
 
+// Release signing comes from environment variables (set from GitHub Actions secrets in CI).
+// Nothing secret is stored in the repo. Without these, release builds are left unsigned.
+//   ANDROID_KEYSTORE_PATH      path to the .jks file
+//   ANDROID_KEYSTORE_PASSWORD  keystore password (also used as the key password, PKCS12)
+//   ANDROID_KEY_ALIAS          key alias (default: phraseshelf)
+val releaseKeystorePath: String? = System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+val releaseKeystorePassword: String? = System.getenv("ANDROID_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+
 android {
     compileSdk = 37
     namespace = "app.phraseshelf"
+    signingConfigs {
+        if (releaseKeystorePath != null && releaseKeystorePassword != null) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = releaseKeystorePassword
+                keyAlias = System.getenv("ANDROID_KEY_ALIAS")?.takeIf { it.isNotBlank() } ?: "phraseshelf"
+                keyPassword = releaseKeystorePassword
+            }
+        }
+    }
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "app.phraseshelf"
@@ -39,6 +57,7 @@ android {
             }
         }
         getByName("release") {
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             optimization {
                enable = true
             }
