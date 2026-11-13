@@ -1,0 +1,71 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>PhraseShelf (UI preview)</title>
+  <!--
+    Browser preview of ui/ with a fake backend, for quick look-and-feel work.
+    From the repo root:  python -m http.server 8765
+    Then open:           http://localhost:8765/dev/preview.html
+    Nothing is saved. window.__mock records what the UI asked the backend to do.
+  -->
+  <link rel="stylesheet" href="../ui/styles.css">
+</head>
+<body>
+<script>
+  const names = ["Korean Phrases", "Emails", "Addresses", "Code", "Emoji", "Work", "Japanese",
+                 "Signatures", "Links", "Misc", "Server cmds", "Family"];
+  const store = {
+    version: 1,
+    activeTab: "t0",
+    tabs: names.map((n, i) => ({
+      id: "t" + i,
+      name: n,
+      snippets: i
+        ? [{ id: "x" + i, title: "Sample", content: "sample text" }]
+        : [
+            { id: "a", title: "Hello", content: "안녕하세요" },
+            { id: "b", title: "Good work", content: "수고하셨습니다" },
+            { id: "c", title: "Thank you", content: "감사합니다" },
+          ],
+    })),
+  };
+
+  window.__mock = {
+    saves: 0, copied: null, exported: null,
+    // Set this to {name, text} to control what "Import…" returns (null = user cancelled).
+    importFile: { name: "Greetings", text: "Hi -> 안녕\nBye -> 안녕히 가세요\nnot a snippet line\n" },
+  };
+
+  window.__TAURI__ = {
+    core: {
+      invoke: async (cmd, args) => {
+        switch (cmd) {
+          case "load_data": return structuredClone(store);
+          case "save_data": __mock.saves++; __mock.last = args.data; return;
+          case "copy_text": __mock.copied = args.text; return;
+          case "pick_import_file": return __mock.importFile;
+          case "save_export": __mock.exported = args; return "C:\\fake\\" + args.fileName;
+          case "app_version": return "0.0.0-preview";
+          case "set_theme": __mock.theme = args.theme; return;
+          default: throw new Error("mock: unknown command " + cmd);
+        }
+      },
+    },
+  };
+
+  // Pull in the real markup so this page never drifts from ui/index.html.
+  (async () => {
+    const html = await (await fetch("../ui/index.html", { cache: "no-store" })).text();
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    doc.querySelectorAll("script").forEach((s) => s.remove());
+    document.body.innerHTML = doc.body.innerHTML;
+    const s = document.createElement("script");
+    s.src = "../ui/main.js?t=" + Date.now();
+    document.querySelector('link[rel="stylesheet"]').href = "../ui/styles.css?t=" + Date.now();
+    document.body.append(s);
+  })();
+</script>
+</body>
+</html>

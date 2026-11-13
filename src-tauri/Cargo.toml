@@ -1,0 +1,33 @@
+[package]
+name = "phraseshelf"
+version = "0.5.0"
+description = "Tabs of labeled buttons that copy phrases to the clipboard"
+edition = "2021"
+
+# Mobile builds load the app as a library; desktop uses the small main.rs wrapper.
+[lib]
+name = "phraseshelf_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# "custom-protocol" embeds the ui/ folder into the app, so plain `cargo run` works
+# without a separate dev server.
+tauri = { version = "2", features = ["custom-protocol", "tray-icon"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-clipboard-manager = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Desktop only: focus the running copy instead of starting a second one.
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-single-instance = "2"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true
