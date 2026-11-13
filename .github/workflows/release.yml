@@ -101,6 +101,12 @@ jobs:
         with:
           node-version: 20
 
+      # The generated Android project calls `cargo tauri` from Gradle, so the CLI must be
+      # installed as a cargo subcommand (prebuilt binary via cargo-binstall, fast).
+      - uses: cargo-bins/cargo-binstall@main
+      - name: Install Tauri CLI
+        run: cargo binstall -y --locked tauri-cli --version '^2'
+
       - name: Use the runner's Android NDK
         run: echo "NDK_HOME=$ANDROID_NDK_LATEST_HOME" >> "$GITHUB_ENV"
 
@@ -114,7 +120,7 @@ jobs:
       - name: Build signed APK
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        run: npx --yes @tauri-apps/cli@2 android build --apk --target aarch64
+        run: cargo tauri android build --apk --target aarch64
 
       - name: Verify signature and upload
         env:
