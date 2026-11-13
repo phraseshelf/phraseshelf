@@ -164,6 +164,15 @@ button, input, textarea { font: inherit; color: inherit; }
 }
 .snippet.flash { background: var(--flash); }
 .snippet.dragging { opacity: 0.4; }
+/* Held by a finger and following it (touch reordering). pointer-events: none lets the
+   code see what is underneath. */
+.lifted {
+  position: relative;
+  z-index: 20;
+  pointer-events: none;
+  transition: none;
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.28);
+}
 
 .snippet .copy {
   display: flex;

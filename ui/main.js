@@ -156,15 +156,13 @@ function renderTabs() {
       b.className = "tab" + (tab.id === data.activeTab ? " active" : "");
       b.style.setProperty("--c", tabColor(tab));
       b.textContent = tab.name;
+      b.dataset.id = tab.id;
       b.title = (i < 9 ? `Ctrl+${i + 1} · ` : "") + "Double-click or right-click to rename";
       b.addEventListener("click", () => selectTab(tab.id));
       b.addEventListener("dblclick", () => editTab(tab));
-      b.addEventListener("contextmenu", (e) => {
-        e.preventDefault();
-        editTab(tab);
-      });
-      onLongPress(b, () => editTab(tab));
+      onContextMenu(b, () => editTab(tab));
       sortable(b, data.tabs, tab);
+      touchSortable(b, data.tabs, tab, () => editTab(tab));
       acceptSnippetDrop(b, tab);
       return b;
     }),
@@ -202,13 +200,10 @@ function renderGrid() {
     edit.textContent = "✎";
     edit.addEventListener("click", () => editSnippet(s));
 
-    card.addEventListener("contextmenu", (e) => {
-      e.preventDefault();
-      editSnippet(s);
-    });
-    onLongPress(card, () => editSnippet(s));
+    onContextMenu(card, () => editSnippet(s));
     card.append(copyBtn, edit);
     sortable(card, tab.snippets, s);
+    touchSortable(card, tab.snippets, s);
     return card;
   });
 
@@ -487,11 +482,19 @@ async function confirmDelete(message) {
   return (await openDialog(els.confirmDlg)) === "ok";
 }
 
-// ---------- touch: long-press ----------
+// ---------- touch: hold to lift, then drag to reorder ----------
 
+let lastPointer = "mouse";
 let suppressClick = false;
-document.addEventListener("pointerdown", () => (suppressClick = false), true);
-// After a long-press, swallow the click that the same touch produces when lifted.
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    lastPointer = e.pointerType;
+    suppressClick = false;
+  },
+  true
+);
+// After a hold, swallow the click that the same touch produces when lifted.
 document.addEventListener(
   "click",
   (e) => {
@@ -504,34 +507,166 @@ document.addEventListener(
   true
 );
 
-function onLongPress(el, fn) {
-  let timer = null;
-  let x = 0;
-  let y = 0;
-  const cancel = () => {
-    clearTimeout(timer);
-    timer = null;
-  };
-  el.addEventListener("pointerdown", (e) => {
-    if (e.pointerType === "mouse") return; // mouse users right-click
-    x = e.clientX;
-    y = e.clientY;
-    cancel();
-    timer = setTimeout(() => {
-      timer = null;
-      suppressClick = true;
-      navigator.vibrate?.(15);
-      fn();
-    }, 500);
+/** Right-click edits with a mouse. On touch, a long-press also fires "contextmenu", but holding is for dragging. */
+function onContextMenu(el, fn) {
+  el.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    if (lastPointer === "mouse") fn();
   });
-  el.addEventListener("pointermove", (e) => {
-    if (timer && Math.hypot(e.clientX - x, e.clientY - y) > 10) cancel();
-  });
-  el.addEventListener("pointerup", cancel);
-  el.addEventListener("pointercancel", cancel);
 }
 
-// ---------- drag & drop (mouse only; on touch, use the Tab picker in the editor) ----------
+const HOLD_MS = 450;
+const itemOf = new WeakMap(); // rendered element -> its tab / snippet
+let touchDrag = null; // the element currently lifted by a finger
+
+/**
+ * Touch reordering: hold an item until it lifts (with a little buzz), then drag it.
+ * Other items slide out of the way as you go. A button dropped on a tab chip moves to that tab.
+ * Holding and letting go without dragging calls onHold (used to edit tabs).
+ */
+function touchSortable(el, list, item, onHold = null) {
+  itemOf.set(el, item);
+  el.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" || touchDrag || dialogOpen()) return;
+    const x0 = e.clientX;
+    const y0 = e.clientY;
+    const stop = () => {
+      clearTimeout(timer);
+      el.removeEventListener("pointermove", move);
+      el.removeEventListener("pointerup", stop);
+      el.removeEventListener("pointercancel", stop);
+    };
+    const move = (ev) => {
+      if (Math.hypot(ev.clientX - x0, ev.clientY - y0) > 10) stop(); // it's a scroll, not a hold
+    };
+    const timer = setTimeout(() => {
+      stop();
+      const r = el.getBoundingClientRect();
+      touchDrag = {
+        el, list, item, onHold,
+        pointerId: e.pointerId,
+        x0, y0, x: x0, y: y0,
+        offX: x0 - r.left,
+        offY: y0 - r.top,
+        moved: false,
+        dropTab: null,
+      };
+      suppressClick = true;
+      navigator.vibrate?.(15);
+      el.classList.add("lifted");
+      followFinger();
+      requestAnimationFrame(autoScroll);
+    }, HOLD_MS);
+    el.addEventListener("pointermove", move);
+    el.addEventListener("pointerup", stop);
+    el.addEventListener("pointercancel", stop);
+  });
+}
+
+// While something is lifted, stop the page from scrolling under the finger.
+document.addEventListener(
+  "touchmove",
+  (e) => {
+    if (touchDrag && e.cancelable) e.preventDefault();
+  },
+  { passive: false }
+);
+
+document.addEventListener("pointermove", (e) => {
+  const d = touchDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  d.x = e.clientX;
+  d.y = e.clientY;
+  if (Math.hypot(d.x - d.x0, d.y - d.y0) > 8) d.moved = true;
+  dragOver();
+});
+
+function dragOver() {
+  const d = touchDrag;
+  const under = document.elementFromPoint(d.x, d.y); // the lifted element has pointer-events: none
+  const isSnippet = d.list !== data.tabs;
+
+  // A button over another tab's chip: offer to move it there.
+  const chip = isSnippet ? under?.closest(".tab") : null;
+  const dropTab = chip && chip.dataset.id !== data.activeTab ? chip : null;
+  if (dropTab !== d.dropTab) {
+    d.dropTab?.classList.remove("drop-target");
+    dropTab?.classList.add("drop-target");
+    d.dropTab = dropTab;
+  }
+
+  // Over a sibling: shift the items in between past the lifted one. The lifted element itself
+  // never moves in the DOM, so the browser keeps delivering this touch to it.
+  const sib = under?.closest(isSnippet ? ".snippet" : ".tab");
+  if (!dropTab && sib && sib !== d.el && sib.parentNode === d.el.parentNode) {
+    const kids = [...d.el.parentNode.children];
+    const from = kids.indexOf(d.el);
+    const to = kids.indexOf(sib);
+    if (to < from) d.el.after(...kids.slice(to, from));
+    else d.el.before(...kids.slice(from + 1, to + 1));
+  }
+  followFinger();
+}
+
+/** Draws the lifted element under the finger, wherever the layout currently puts it. */
+function followFinger() {
+  const d = touchDrag;
+  d.el.style.transform = "";
+  const r = d.el.getBoundingClientRect();
+  d.el.style.transform = `translate(${d.x - d.offX - r.left}px, ${d.y - d.offY - r.top}px) scale(1.05)`;
+}
+
+/** Scrolls the button grid while a finger holds a button near its top or bottom edge. */
+function autoScroll() {
+  const d = touchDrag;
+  if (!d) return;
+  if (d.list !== data.tabs) {
+    const r = els.grid.getBoundingClientRect();
+    const edge = 48;
+    const step = d.y > r.bottom - edge ? 8 : d.y < r.top + edge && d.y > r.top ? -8 : 0;
+    const before = els.grid.scrollTop;
+    if (step) els.grid.scrollTop += step;
+    if (els.grid.scrollTop !== before) dragOver();
+  }
+  requestAnimationFrame(autoScroll);
+}
+
+function endTouchDrag(e) {
+  const d = touchDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  touchDrag = null;
+  d.el.classList.remove("lifted");
+  d.el.style.transform = "";
+  d.dropTab?.classList.remove("drop-target");
+
+  if (e.type === "pointercancel") {
+    render(); // put everything back where it was
+    return;
+  }
+  if (d.dropTab) {
+    const tab = data.tabs.find((t) => t.id === d.dropTab.dataset.id);
+    d.list.splice(d.list.indexOf(d.item), 1);
+    tab.snippets.push(d.item);
+    toast(`Moved “${d.item.title}” to “${tab.name}”`);
+  } else if (!d.moved && d.onHold) {
+    d.onHold();
+    return;
+  } else {
+    // Write the on-screen order back. With a filter active only some items are shown, so
+    // they are shuffled among their own positions and hidden ones stay put.
+    const shown = [...d.el.parentNode.children].map((c) => itemOf.get(c)).filter(Boolean);
+    const slots = shown.map((it) => d.list.indexOf(it)).sort((a, b) => a - b);
+    const changed = shown.some((it, k) => d.list[slots[k]] !== it);
+    if (!changed) return;
+    shown.forEach((it, k) => (d.list[slots[k]] = it));
+  }
+  render();
+  save();
+}
+document.addEventListener("pointerup", endTouchDrag);
+document.addEventListener("pointercancel", endTouchDrag);
+
+// ---------- drag & drop (mouse; touch uses touchSortable above) ----------
 
 const HAS_MOUSE = matchMedia("(hover: hover) and (pointer: fine)").matches;
 let dragging = null; // { list, item }
