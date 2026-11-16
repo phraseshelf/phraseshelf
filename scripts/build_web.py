@@ -38,6 +38,7 @@ def main() -> None:
     shutil.copytree(WEB / "icons", OUT / "icons")
     shutil.copy2(WEB / "favicon.png", OUT)
     shutil.copy2(WEB / "manifest.webmanifest", OUT)
+    shutil.copy2(WEB / "privacy.html", OUT)
     for name in ("platform.js", "sw.js"):
         text = (WEB / name).read_text("utf-8")
         (OUT / name).write_text(text.replace(VERSION_MARK, version), "utf-8", newline="\n")

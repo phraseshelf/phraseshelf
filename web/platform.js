@@ -136,6 +136,17 @@
       "Saved only in this browser: use Export all… to back up";
   }
 
+  // A Privacy link beside the version number in the footer.
+  const version = document.querySelector("#version");
+  if (version) {
+    const link = document.createElement("a");
+    link.href = "privacy.html";
+    link.textContent = "Privacy";
+    link.className = "version";
+    link.style.cssText = "color:inherit;margin-left:10px";
+    version.after(link);
+  }
+
   // Works offline and can be installed ("Install app" / "Add to Home screen").
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
