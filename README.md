@@ -38,7 +38,7 @@ Good work -> 수고하셨습니다
 The same app runs on Android:
 - Tap a button to copy it. Tap ✎ to edit it.
 - To reorder, hold a button or tab until it lifts, then drag it. Drop a button on another tab to move it there (or use the **Tab** picker in its editor).
-- Hold a tab and let go without dragging to rename it, change its color, or export it.
+- Hold a tab still for about a second (or hold it and let go without dragging) to rename it, change its color, or export it.
 - Each device keeps its own data. To copy everything across, use **Export all** on one device and **Import** on the other.
 
 ## Installing

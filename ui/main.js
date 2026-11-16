@@ -515,7 +515,8 @@ function onContextMenu(el, fn) {
   });
 }
 
-const HOLD_MS = 450;
+const HOLD_MS = 450; // hold this long to lift an item
+const OPEN_MS = 450; // ...then this much longer, without moving, to open a tab's editor
 const itemOf = new WeakMap(); // rendered element -> its tab / snippet
 let touchDrag = null; // the element currently lifted by a finger
 
@@ -556,6 +557,15 @@ function touchSortable(el, list, item, onHold = null) {
       el.classList.add("lifted");
       followFinger();
       requestAnimationFrame(autoScroll);
+      // Still holding without dragging a little longer: open the editor without waiting for the lift.
+      if (onHold) {
+        const d = touchDrag;
+        setTimeout(() => {
+          if (touchDrag !== d || d.moved) return;
+          putDown(d);
+          onHold();
+        }, OPEN_MS);
+      }
     }, HOLD_MS);
     el.addEventListener("pointermove", move);
     el.addEventListener("pointerup", stop);
@@ -631,13 +641,18 @@ function autoScroll() {
   requestAnimationFrame(autoScroll);
 }
 
-function endTouchDrag(e) {
-  const d = touchDrag;
-  if (!d || e.pointerId !== d.pointerId) return;
+/** Ends the lifted state and its visuals; the finger may still be down. */
+function putDown(d) {
   touchDrag = null;
   d.el.classList.remove("lifted");
   d.el.style.transform = "";
   d.dropTab?.classList.remove("drop-target");
+}
+
+function endTouchDrag(e) {
+  const d = touchDrag;
+  if (!d || e.pointerId !== d.pointerId) return;
+  putDown(d);
 
   if (e.type === "pointercancel") {
     render(); // put everything back where it was
