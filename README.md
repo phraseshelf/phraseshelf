@@ -22,7 +22,7 @@
 | **Android** 7+ (arm64) | `PhraseShelf_<version>_arm64.apk` from [Releases](https://github.com/phraseshelf/phraseshelf/releases/latest) |
 | **Linux** | `.AppImage`, `.deb` or `.rpm` from [Releases](https://github.com/phraseshelf/phraseshelf/releases/latest) |
 
-The Windows installer isn't code-signed yet, so Windows SmartScreen may warn about it. Click **More info → Run anyway**. On Android, allow your browser or file manager to "install unknown apps".
+The Windows installer isn't code-signed yet (see the [code signing policy](#code-signing-policy)), so Windows SmartScreen may warn about it. Click **More info → Run anyway**. On Android, allow your browser or file manager to "install unknown apps".
 
 Built with [Tauri 2](https://tauri.app). The Rust backend (`src-tauri/`) handles saving data and the clipboard, and the UI (`ui/`) is plain HTML/CSS/JS with no build step.
 
@@ -120,6 +120,17 @@ The APK is written to `dist\PhraseShelf-<version>-arm64.apk`. The script works a
 ### Windows installer
 
 To build the installer, install the Tauri CLI once with `cargo install tauri-cli --version "^2" --locked`. Then run `cargo tauri build` in `src-tauri`. The installer is written to `src-tauri\target\release\bundle\nsis\`.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
+
+- Committers and reviewers: [Members](https://github.com/orgs/phraseshelf/people)
+- Approvers: [Owners](https://github.com/orgs/phraseshelf/people?query=role%3Aowner)
+
+Windows installers are built only by the [release workflow](.github/workflows/release.yml) from the tagged source in this repository, and each signing request is approved by hand. Only PhraseShelf's own binaries are signed.
+
+**Privacy:** This program will not transfer any information to other networked systems unless specifically requested by the user or the person installing or operating it. The one exception is the desktop update check, which contacts GitHub and sends no personal data. See the full [privacy policy](https://phraseshelf.app/privacy).
 
 ## License
 
