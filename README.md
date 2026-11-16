@@ -1,6 +1,28 @@
 # PhraseShelf
 
-A small Windows, Linux, Android and web app that holds tabs of labeled buttons. Click a button and its content is copied to the clipboard. It's handy for phrases you can't easily type (Korean, emoji, symbols), canned replies, addresses, and code snippets.
+**Tabs of labeled buttons that copy phrases to your clipboard.** Click "Thank you" and 감사합니다 is ready to paste. It's handy for phrases you can't easily type (other languages, emoji, symbols), canned replies, addresses, and code snippets.
+
+<p>
+  <img src="docs/desktop.png" alt="PhraseShelf on Windows, dark theme" width="600">
+  &nbsp;
+  <img src="docs/phone.png" alt="PhraseShelf on a phone, light theme" width="200">
+</p>
+
+- **Windows, Linux, Android and the web.** It's one app, with the same look everywhere.
+- **Private by design.** There are no accounts, no tracking and no cloud. Your buttons stay on your device. See the [privacy policy](https://phraseshelf.app/privacy).
+- **Small and fast.** The installer is about 3 MB, and it starts instantly from the system tray.
+- **Import and export** tabs as `.json` to move them between devices or share them, or import a plain `Title -> Content` text list.
+
+## Download
+
+| Platform | Get it |
+|---|---|
+| **Web** (any browser, installable, works offline) | [phraseshelf.app](https://phraseshelf.app) |
+| **Windows** 10/11 | `PhraseShelf_<version>_x64-setup.exe` from [Releases](https://github.com/phraseshelf/phraseshelf/releases/latest) |
+| **Android** 7+ (arm64) | `PhraseShelf_<version>_arm64.apk` from [Releases](https://github.com/phraseshelf/phraseshelf/releases/latest) |
+| **Linux** | `.AppImage`, `.deb` or `.rpm` from [Releases](https://github.com/phraseshelf/phraseshelf/releases/latest) |
+
+The Windows installer isn't code-signed yet, so Windows SmartScreen may warn about it. Click **More info → Run anyway**. On Android, allow your browser or file manager to "install unknown apps".
 
 Built with [Tauri 2](https://tauri.app). The Rust backend (`src-tauri/`) handles saving data and the clipboard, and the UI (`ui/`) is plain HTML/CSS/JS with no build step.
 
@@ -98,3 +120,7 @@ The APK is written to `dist\PhraseShelf-<version>-arm64.apk`. The script works a
 ### Windows installer
 
 To build the installer, install the Tauri CLI once with `cargo install tauri-cli --version "^2" --locked`. Then run `cargo tauri build` in `src-tauri`. The installer is written to `src-tauri\target\release\bundle\nsis\`.
+
+## License
+
+[MIT](LICENSE)

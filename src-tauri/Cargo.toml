@@ -3,6 +3,7 @@ name = "phraseshelf"
 version = "0.5.5"
 description = "Tabs of labeled buttons that copy phrases to the clipboard"
 edition = "2021"
+license = "MIT"
 
 # Mobile builds load the app as a library; desktop uses the small main.rs wrapper.
 [lib]
