@@ -1,6 +1,6 @@
 # PhraseShelf
 
-A small Windows and Android app that holds tabs of labeled buttons. Click a button and its content is copied to the clipboard. It's handy for phrases you can't easily type (Korean, emoji, symbols), canned replies, addresses, and code snippets.
+A small Windows, Linux, Android and web app that holds tabs of labeled buttons. Click a button and its content is copied to the clipboard. It's handy for phrases you can't easily type (Korean, emoji, symbols), canned replies, addresses, and code snippets.
 
 Built with [Tauri 2](https://tauri.app). The Rust backend (`src-tauri/`) handles saving data and the clipboard, and the UI (`ui/`) is plain HTML/CSS/JS with no build step.
 
@@ -40,6 +40,15 @@ The same app runs on Android:
 - To reorder, hold a button or tab until it lifts, then drag it. Drop a button on another tab to move it there (or use the **Tab** picker in its editor).
 - Hold a tab still for about a second (or hold it and let go without dragging) to rename it, change its color, or export it.
 - Each device keeps its own data. To copy everything across, use **Export all** on one device and **Import** on the other.
+
+## Web version
+
+The same app also runs in a browser, with no install needed:
+- Your data is stored only in that browser's local storage on that device, and it is never sent anywhere. Clearing the site's data deletes it, so use **Export all…** to back up.
+- It works offline after the first visit, and it can be installed: **Install app** in Chrome/Edge, or **Add to Home Screen** on a phone (iPhone included).
+- There's no tray or auto-update, and none is needed: the site is always the latest version.
+
+To build it, run `python scripts/build_web.py`. It writes a static site to `dist/web/` (the shared `ui/` plus `web/`). Upload that folder to any static host. The version comes from `tauri.conf.json`, and a new version replaces the offline copy the next time the page is opened.
 
 ## Installing
 

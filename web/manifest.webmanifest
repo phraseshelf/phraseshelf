@@ -1,0 +1,14 @@
+{
+  "name": "PhraseShelf",
+  "short_name": "PhraseShelf",
+  "description": "Tabs of labeled buttons that copy phrases to the clipboard.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#17191d",
+  "theme_color": "#3b6fd9",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

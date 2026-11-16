@@ -1,4 +1,4 @@
-# Builds PhraseShelf for Windows, Linux and Android when a version tag is pushed,
+# Builds PhraseShelf for Windows, Linux, Android and the web when a version tag is pushed,
 # and attaches everything to a DRAFT GitHub Release for review before publishing.
 #
 #   1. Bump "version" in src-tauri/tauri.conf.json and src-tauri/Cargo.toml
@@ -80,6 +80,24 @@ jobs:
           args: --bundles ${{ matrix.bundles }} --config src-tauri/tauri.release.conf.json
           releaseId: ${{ needs.create-release.outputs.release_id }}
           updaterJsonPreferNsis: true
+
+  web:
+    needs: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and upload the web app
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
+        run: |
+          python3 scripts/build_web.py
+          version=$(jq -r .version src-tauri/tauri.conf.json)
+          name="PhraseShelf_${version}_web.zip"
+          (cd dist/web && zip -qr "../../$name" .)
+          gh api -X POST -H "Content-Type: application/zip" \
+            "https://uploads.github.com/repos/$GITHUB_REPOSITORY/releases/$RELEASE_ID/assets?name=$name" \
+            --input "$name" --jq .browser_download_url
 
   android:
     needs: create-release
