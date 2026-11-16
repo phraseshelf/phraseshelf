@@ -1,0 +1,12 @@
+# Cloudflare Worker that serves the web app (dist/web, built by scripts/build_web.py) at
+# phraseshelf.app. The release workflow deploys it; the custom domain is set in the dashboard.
+name = "raspy-dawn-1d94"
+compatibility_date = "2025-06-01"
+
+# Serve only on phraseshelf.app: no *.workers.dev address and no preview URLs.
+workers_dev = false
+preview_urls = false
+
+[assets]
+directory = "./dist/web"
+not_found_handling = "single-page-application"

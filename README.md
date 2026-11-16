@@ -70,7 +70,7 @@ The same app also runs in a browser, with no install needed:
 - It works offline after the first visit, and it can be installed: **Install app** in Chrome/Edge, or **Add to Home Screen** on a phone (iPhone included).
 - There's no tray or auto-update, and none is needed: the site is always the latest version.
 
-To build it, run `python scripts/build_web.py`. It writes a static site to `dist/web/` (the shared `ui/` plus `web/`). Upload that folder to any static host. The version comes from `tauri.conf.json`, and a new version replaces the offline copy the next time the page is opened.
+To build it, run `python scripts/build_web.py`. It writes a static site to `dist/web/` (the shared `ui/` plus `web/`), which can be uploaded to any static host. Releases deploy it to phraseshelf.app automatically as a Cloudflare Worker (see `wrangler.toml`). The version comes from `tauri.conf.json`, and a new version replaces the offline copy the next time the page is opened.
 
 ## Installing
 
