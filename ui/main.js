@@ -46,13 +46,24 @@ const activeTab = () => data.tabs.find((t) => t.id === data.activeTab);
 // ---------- persistence ----------
 
 async function init() {
+  let loadError = null;
   try {
-    data = await invoke("load_data");
+    data = await invoke("load_data"); // null on first run
   } catch (err) {
+    loadError = err;
+  }
+  await I18N.setLanguage(data?.language);
+  I18N.apply();
+  fillLanguagePicker();
+  if (loadError) {
     els.grid.replaceChildren();
     els.empty.hidden = false;
-    els.empty.textContent = "Could not load your data: " + err;
+    els.empty.textContent = t("error.load", { error: loadError });
     return;
+  }
+  if (!data) {
+    data = firstRunData();
+    save();
   }
   ensureValid();
   applyTheme();
@@ -63,11 +74,64 @@ async function init() {
   invoke("platform")
     .then((p) => {
       if (p !== "desktop") return;
+      isDesktop = true;
       els.version.classList.add("clickable");
-      els.version.title = "Check for updates";
+      els.version.dataset.i18nTitle = "update.check";
+      I18N.apply(els.version.parentNode);
+      updateTray();
       setTimeout(() => checkForUpdates(false), 3000);
     })
     .catch(() => {});
+}
+
+let isDesktop = false;
+
+/** The starter tab, in the user's language. */
+function firstRunData() {
+  const w = I18N.welcome();
+  const tab = {
+    id: uid(),
+    name: w.name,
+    color: PALETTE[0],
+    snippets: w.snippets.map((s) => ({ id: uid(), title: s.title, content: s.content })),
+  };
+  return { version: 1, tabs: [tab], activeTab: tab.id, theme: null, language: null };
+}
+
+// ---------- language ----------
+
+function fillLanguagePicker() {
+  const sel = $("#lang");
+  const auto = document.createElement("option");
+  auto.value = "";
+  auto.textContent = "🌐 " + t("language.auto");
+  sel.replaceChildren(
+    auto,
+    ...Object.entries(I18N.LANGUAGES).map(([code, name]) => {
+      const o = document.createElement("option");
+      o.value = code;
+      o.textContent = "🌐 " + name;
+      return o;
+    })
+  );
+  sel.value = data?.language && I18N.LANGUAGES[data.language] ? data.language : "";
+}
+
+$("#lang").addEventListener("change", async (e) => {
+  data.language = e.target.value || null;
+  await I18N.setLanguage(data.language);
+  I18N.apply();
+  fillLanguagePicker();
+  applyTheme();
+  render();
+  updateTray();
+  save();
+});
+
+/** Desktop tray menu labels follow the app language. */
+function updateTray() {
+  if (!isDesktop) return;
+  invoke("set_tray_labels", { show: t("tray.show"), quit: t("tray.quit") }).catch(() => {});
 }
 
 // ---------- updates (desktop) ----------
@@ -78,14 +142,14 @@ async function checkForUpdates(manual) {
     update = await invoke("check_update");
   } catch (err) {
     // Quiet at startup (offline, feed not published yet…); explain only when asked.
-    if (manual) toast("Couldn't check for updates: " + err, true);
+    if (manual) toast(t("update.checkFailed", { error: err }), true);
     return;
   }
   if (!update) {
-    if (manual) toast("You're on the latest version");
+    if (manual) toast(t("update.upToDate"));
     return;
   }
-  $("#update-text").textContent = `PhraseShelf ${update.version} is available.`;
+  $("#update-text").textContent = t("update.available", { version: update.version });
   $("#update-bar").hidden = false;
 }
 
@@ -96,25 +160,25 @@ $("#update-later").addEventListener("click", () => ($("#update-bar").hidden = tr
 $("#update-now").addEventListener("click", async () => {
   const btn = $("#update-now");
   btn.disabled = true;
-  btn.textContent = "Downloading…";
+  btn.textContent = t("update.downloading");
   try {
     await invoke("install_update"); // the app restarts when done
   } catch (err) {
     btn.disabled = false;
-    btn.textContent = "Update now";
-    toast("Update failed: " + err, true);
+    btn.textContent = t("update.now");
+    toast(t("update.failed", { error: err }), true);
   }
 });
 
 // ---------- theme ----------
 
-const THEMES = { auto: "◐ Auto", light: "☀ Light", dark: "☾ Dark" };
+const THEMES = { auto: "◐", light: "☀", dark: "☾" }; // icon; the label is "theme.<name>"
 
 function applyTheme() {
   const theme = data.theme in THEMES ? data.theme : "auto";
   if (theme === "auto") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = theme;
-  els.theme.textContent = THEMES[theme];
+  els.theme.textContent = `${THEMES[theme]} ${t("theme." + theme)}`;
   invoke("set_theme", { theme }).catch(() => {}); // title bar; cosmetic only
 }
 
@@ -128,7 +192,7 @@ els.theme.addEventListener("click", () => {
 });
 
 function ensureValid() {
-  if (!data.tabs.length) data.tabs.push({ id: uid(), name: "General", snippets: [] });
+  if (!data.tabs.length) data.tabs.push({ id: uid(), name: t("tab.defaultName"), snippets: [] });
   if (!activeTab()) data.activeTab = data.tabs[0].id;
   // Pin a color on any tab that lacks one, so it doesn't change when tabs are reordered.
   data.tabs.forEach((t, i) => (t.color ||= PALETTE[i % PALETTE.length]));
@@ -138,7 +202,7 @@ async function save() {
   try {
     await invoke("save_data", { data });
   } catch (err) {
-    toast("Save failed: " + err, true);
+    toast(t("error.save", { error: err }), true);
   }
 }
 
@@ -157,7 +221,7 @@ function renderTabs() {
       b.style.setProperty("--c", tabColor(tab));
       b.textContent = tab.name;
       b.dataset.id = tab.id;
-      b.title = (i < 9 ? `Ctrl+${i + 1} · ` : "") + "Double-click or right-click to rename";
+      b.title = (i < 9 ? `Ctrl+${i + 1} · ` : "") + t("tab.tooltip");
       b.addEventListener("click", () => selectTab(tab.id));
       b.addEventListener("dblclick", () => editTab(tab));
       onContextMenu(b, () => editTab(tab));
@@ -196,7 +260,7 @@ function renderGrid() {
 
     const edit = document.createElement("button");
     edit.className = "edit";
-    edit.title = "Edit";
+    edit.title = t("edit");
     edit.textContent = "✎";
     edit.addEventListener("click", () => editSnippet(s));
 
@@ -210,14 +274,14 @@ function renderGrid() {
   if (!q) {
     const add = document.createElement("button");
     add.className = "add-card";
-    add.textContent = "+ Add button";
+    add.textContent = "+ " + t("snippet.add");
     add.addEventListener("click", () => editSnippet(null));
     nodes.push(add);
   }
 
   els.grid.replaceChildren(...nodes);
   els.empty.hidden = !(q && items.length === 0);
-  els.empty.textContent = `Nothing in “${tab.name}” matches “${els.search.value.trim()}”.`;
+  els.empty.textContent = t("search.noMatch", { tab: tab.name, query: els.search.value.trim() });
 }
 
 // ---------- actions ----------
@@ -233,11 +297,11 @@ function selectTab(id) {
 async function copy(snippet, card) {
   try {
     await invoke("copy_text", { text: snippet.content });
-    toast(`Copied “${snippet.title}”`);
+    toast(t("copied", { title: snippet.title }));
     card.classList.add("flash");
     setTimeout(() => card.classList.remove("flash"), 400);
   } catch (err) {
-    toast("Copy failed: " + err, true);
+    toast(t("error.copy", { error: err }), true);
   }
 }
 
@@ -245,7 +309,7 @@ async function editSnippet(snippet) {
   if (dialogOpen()) return; // long-press and contextmenu can both fire on touch
   const isNew = !snippet;
   const f = els.snippetForm.elements;
-  $("#snippet-dlg-title").textContent = isNew ? "New button" : "Edit button";
+  $("#snippet-dlg-title").textContent = t(isNew ? "snippet.new" : "snippet.edit");
   f.label.value = snippet ? snippet.title : "";
   f.body.value = snippet ? snippet.content : "";
   f.tab.replaceChildren(
@@ -269,17 +333,17 @@ async function editSnippet(snippet) {
     const target = data.tabs.find((t) => t.id === f.tab.value) || activeTab();
     if (isNew) {
       target.snippets.push({ id: uid(), title, content });
-      if (target.snippets !== list) toast(`Added “${title}” to “${target.name}”`);
+      if (target.snippets !== list) toast(t("snippet.addedTo", { title, tab: target.name }));
     } else {
       Object.assign(snippet, { title, content });
       if (target.snippets !== list) {
         list.splice(list.indexOf(snippet), 1);
         target.snippets.push(snippet);
-        toast(`Moved “${title}” to “${target.name}”`);
+        toast(t("snippet.movedTo", { title, tab: target.name }));
       }
     }
   } else if (result === "delete") {
-    if (!(await confirmDelete(`Delete the “${snippet.title}” button?`))) return;
+    if (!(await confirmDelete(t("snippet.confirmDelete", { title: snippet.title })))) return;
     list.splice(list.indexOf(snippet), 1);
   } else {
     return;
@@ -292,7 +356,7 @@ async function editTab(tab) {
   if (dialogOpen()) return;
   const isNew = !tab;
   const f = els.tabForm.elements;
-  $("#tab-dlg-title").textContent = isNew ? "New tab" : "Rename tab";
+  $("#tab-dlg-title").textContent = t(isNew ? "tab.new" : "tab.rename");
   f.label.value = tab ? tab.name : "";
   $("#tab-delete").hidden = isNew;
   $("#tab-export").hidden = isNew;
@@ -319,9 +383,9 @@ async function editTab(tab) {
     if (!name) return;
     const color = els.tabColors.querySelector("input:checked")?.value || current;
     if (isNew) {
-      const t = { id: uid(), name, color, snippets: [] };
-      data.tabs.push(t);
-      data.activeTab = t.id;
+      const created = { id: uid(), name, color, snippets: [] };
+      data.tabs.push(created);
+      data.activeTab = created.id;
       els.search.value = "";
     } else {
       tab.name = name;
@@ -333,8 +397,8 @@ async function editTab(tab) {
   } else if (result === "delete") {
     const n = tab.snippets.length;
     const msg = n
-      ? `Delete the “${tab.name}” tab and its ${n} button${n === 1 ? "" : "s"}?`
-      : `Delete the “${tab.name}” tab?`;
+      ? t("tab.confirmDeleteWithButtons", { tab: tab.name, n })
+      : t("tab.confirmDelete", { tab: tab.name });
     if (!(await confirmDelete(msg))) return;
     const i = data.tabs.indexOf(tab);
     data.tabs.splice(i, 1);
@@ -366,10 +430,12 @@ async function exportTabs(tabs, baseName) {
     const path = await invoke("save_export", {
       fileName: safeFileName(baseName) + ".json",
       contents: JSON.stringify(payload, null, 2),
+      title: t("export.dialogTitle"),
+      filterName: t("export.filter"),
     });
-    if (path) toast(`Exported to ${path}`);
+    if (path) toast(t("export.done", { path }));
   } catch (err) {
-    toast("Export failed: " + err, true);
+    toast(t("export.failed", { error: err }), true);
   }
 }
 
@@ -386,10 +452,10 @@ function parseImport({ name, text }) {
     try {
       json = JSON.parse(trimmed);
     } catch {
-      throw new Error("That file isn't valid JSON.");
+      throw new Error(t("import.badJson"));
     }
     const list = Array.isArray(json) ? json : Array.isArray(json.tabs) ? json.tabs : null;
-    if (!list || !list.length) throw new Error("No tabs found in that file.");
+    if (!list || !list.length) throw new Error(t("import.noTabs"));
     return list.map((t) => ({
       name: String(t.name || name).slice(0, 40),
       color: isHexColor(t.color) ? t.color : null,
@@ -406,16 +472,16 @@ function parseImport({ name, text }) {
       return i < 0 ? null : { title: line.slice(0, i).trim(), content: line.slice(i + 2).trim() };
     })
     .filter((s) => s && s.title && s.content);
-  if (!snippets.length) throw new Error("No “Title -> Content” lines found in that file.");
+  if (!snippets.length) throw new Error(t("import.noLines"));
   return [{ name: name.slice(0, 40), color: null, snippets }];
 }
 
 async function importTabs() {
   let file;
   try {
-    file = await invoke("pick_import_file");
+    file = await invoke("pick_import_file", { title: t("import.dialogTitle"), filterName: t("import.filter") });
   } catch (err) {
-    toast("Import failed: " + err, true);
+    toast(t("import.failed", { error: err }), true);
     return;
   }
   if (!file) return;
@@ -424,21 +490,21 @@ async function importTabs() {
   try {
     incoming = parseImport(file);
   } catch (err) {
-    toast("Import failed: " + err.message, true);
+    toast(t("import.failed", { error: err.message }), true);
     return;
   }
 
   let buttons = 0;
-  const added = incoming.map((t) => {
+  const added = incoming.map((inc) => {
     // Never merge into or overwrite an existing tab: add "(2)", "(3)"… on a name clash.
-    const base = t.name || "Imported";
+    const base = inc.name || t("import.defaultName");
     let name = base;
     for (let k = 2; data.tabs.some((x) => x.name === name); k++) name = `${base} (${k})`;
     const tab = {
       id: uid(),
       name,
-      color: t.color || PALETTE[data.tabs.length % PALETTE.length],
-      snippets: t.snippets.map((s) => ({ id: uid(), ...s })),
+      color: inc.color || PALETTE[data.tabs.length % PALETTE.length],
+      snippets: inc.snippets.map((s) => ({ id: uid(), ...s })),
     };
     buttons += tab.snippets.length;
     data.tabs.push(tab);
@@ -450,8 +516,10 @@ async function importTabs() {
   render();
   save();
   toast(
-    `Imported ${added.length} tab${added.length === 1 ? "" : "s"}, ` +
-      `${buttons} button${buttons === 1 ? "" : "s"}`
+    t("import.done", {
+      tabs: t("count.tabs", { n: added.length }),
+      buttons: t("count.buttons", { n: buttons }),
+    })
   );
 }
 
@@ -662,7 +730,7 @@ function endTouchDrag(e) {
     const tab = data.tabs.find((t) => t.id === d.dropTab.dataset.id);
     d.list.splice(d.list.indexOf(d.item), 1);
     tab.snippets.push(d.item);
-    toast(`Moved “${d.item.title}” to “${tab.name}”`);
+    toast(t("snippet.movedTo", { title: d.item.title, tab: tab.name }));
   } else if (!d.moved && d.onHold) {
     d.onHold();
     return;
@@ -737,7 +805,7 @@ function acceptSnippetDrop(tabEl, tab) {
     list.splice(list.indexOf(item), 1);
     tab.snippets.push(item);
     dragging = null;
-    toast(`Moved “${item.title}” to “${tab.name}”`);
+    toast(t("snippet.movedTo", { title: item.title, tab: tab.name }));
     render();
     save();
   });

@@ -9,6 +9,8 @@ const FILES = [
   "index.html",
   "styles.css",
   "main.js",
+  "i18n.js",
+  /*__I18N_FILES__*/
   "platform.js",
   "manifest.webmanifest",
   "icons/icon-192.png",

@@ -127,6 +127,8 @@ button, input, textarea { font: inherit; color: inherit; }
   cursor: pointer;
 }
 .tool-btn:hover { color: var(--text); background: var(--surface-hover); }
+/* Language picker: as wide as the chosen language, not the longest one. */
+select.tool-btn { field-sizing: content; max-width: 170px; cursor: pointer; }
 
 #search {
   width: min(340px, 100%);

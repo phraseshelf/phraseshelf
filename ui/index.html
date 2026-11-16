@@ -7,32 +7,34 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+  <!-- Text is filled in from i18n/<language>.json by i18n.js (data-i18n* attributes). -->
   <header class="topbar">
-    <nav id="tabs" class="tabs" aria-label="Tabs">
-      <button id="add-tab" class="add-tab" title="New tab">+</button>
+    <nav id="tabs" class="tabs" data-i18n-aria-label="tabs.label">
+      <button id="add-tab" class="add-tab" data-i18n-title="tab.new">+</button>
     </nav>
     <div class="toolbar">
-      <input id="search" type="search" placeholder="Filter this tab…  (Ctrl+F)" autocomplete="off" spellcheck="false">
+      <input id="search" type="search" data-i18n-placeholder="search.placeholder" autocomplete="off" spellcheck="false">
       <span class="spacer"></span>
-      <button id="import" class="tool-btn" title="Add tabs from a .json export or a .txt list (one “Title -> Content” per line)">Import…</button>
-      <button id="export-all" class="tool-btn" title="Save every tab to a .json file">Export all…</button>
-      <button id="theme" class="tool-btn" title="Theme: Auto follows your system. Click to switch.">◐ Auto</button>
+      <button id="import" class="tool-btn" data-i18n="import" data-i18n-title="import.tooltip"></button>
+      <button id="export-all" class="tool-btn" data-i18n="exportAll" data-i18n-title="exportAll.tooltip"></button>
+      <button id="theme" class="tool-btn" data-i18n-title="theme.tooltip"></button>
+      <select id="lang" class="tool-btn" data-i18n-title="language.tooltip" data-i18n-aria-label="language.tooltip"></select>
     </div>
   </header>
 
   <div id="update-bar" class="update-bar" hidden>
     <span id="update-text"></span>
     <span class="spacer"></span>
-    <button id="update-now" class="tool-btn primary-btn">Update now</button>
-    <button id="update-later" class="tool-btn">Later</button>
+    <button id="update-now" class="tool-btn primary-btn" data-i18n="update.now"></button>
+    <button id="update-later" class="tool-btn" data-i18n="update.later"></button>
   </div>
 
   <main id="grid" class="grid"></main>
   <p id="empty" class="empty" hidden></p>
 
   <footer class="hint">
-    <span class="hint-text hint-mouse">Click to copy · Right-click or ✎ to edit · Drag to reorder (drop on a tab to move) · Ctrl+N new button · Ctrl+1–9 switch tabs · Closing hides to the tray</span>
-    <span class="hint-text hint-touch">Tap to copy · ✎ to edit · Hold &amp; drag to reorder (drop on a tab to move) · Hold a tab to rename</span>
+    <span class="hint-text hint-mouse" data-i18n="hint.mouse"></span>
+    <span class="hint-text hint-touch" data-i18n="hint.touch"></span>
     <span id="version" class="version"></span>
   </footer>
 
@@ -40,39 +42,39 @@
 
   <dialog id="snippet-dlg">
     <form method="dialog" id="snippet-form">
-      <h2 id="snippet-dlg-title">New button</h2>
-      <label>Label
+      <h2 id="snippet-dlg-title"></h2>
+      <label><span data-i18n="snippet.label"></span>
         <input name="label" required maxlength="80" autocomplete="off">
       </label>
-      <label>Content to copy
+      <label><span data-i18n="snippet.content"></span>
         <textarea name="body" rows="7" required spellcheck="false"></textarea>
       </label>
-      <label>Tab
+      <label><span data-i18n="snippet.tab"></span>
         <select name="tab"></select>
       </label>
       <div class="dlg-actions">
-        <button type="button" id="snippet-delete" class="danger">Delete</button>
+        <button type="button" id="snippet-delete" class="danger" data-i18n="delete"></button>
         <span class="spacer"></span>
-        <button type="button" class="cancel">Cancel</button>
-        <button value="save" class="primary">Save</button>
+        <button type="button" class="cancel" data-i18n="cancel"></button>
+        <button value="save" class="primary" data-i18n="save"></button>
       </div>
     </form>
   </dialog>
 
   <dialog id="tab-dlg">
     <form method="dialog" id="tab-form">
-      <h2 id="tab-dlg-title">New tab</h2>
-      <label>Tab name
+      <h2 id="tab-dlg-title"></h2>
+      <label><span data-i18n="tab.name"></span>
         <input name="label" required maxlength="40" autocomplete="off">
       </label>
-      <div class="field-label">Color</div>
-      <div id="tab-colors" class="swatches" role="radiogroup" aria-label="Tab color"></div>
+      <div class="field-label" data-i18n="tab.color"></div>
+      <div id="tab-colors" class="swatches" role="radiogroup" data-i18n-aria-label="tab.color"></div>
       <div class="dlg-actions">
-        <button type="button" id="tab-delete" class="danger">Delete tab</button>
-        <button type="button" id="tab-export">Export tab…</button>
+        <button type="button" id="tab-delete" class="danger" data-i18n="tab.delete"></button>
+        <button type="button" id="tab-export" data-i18n="tab.export"></button>
         <span class="spacer"></span>
-        <button type="button" class="cancel">Cancel</button>
-        <button value="save" class="primary">Save</button>
+        <button type="button" class="cancel" data-i18n="cancel"></button>
+        <button value="save" class="primary" data-i18n="save"></button>
       </div>
     </form>
   </dialog>
@@ -82,12 +84,13 @@
       <p id="confirm-msg"></p>
       <div class="dlg-actions">
         <span class="spacer"></span>
-        <button value="cancel">Cancel</button>
-        <button value="ok" class="danger">Delete</button>
+        <button value="cancel" data-i18n="cancel"></button>
+        <button value="ok" class="danger" data-i18n="delete"></button>
       </div>
     </form>
   </dialog>
 
+  <script src="i18n.js"></script>
   <script src="main.js"></script>
 </body>
 </html>

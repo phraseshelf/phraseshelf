@@ -44,34 +44,13 @@ struct Data {
     /// "light" | "dark"; None = follow the system.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     theme: Option<String>,
+    /// UI language code, e.g. "fr" or "pt-BR"; None = follow the system.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    language: Option<String>,
 }
 
 fn default_version() -> u32 {
     1
-}
-
-/// Starter content shown the first time the app runs.
-fn seed() -> Data {
-    let s = |id: &str, title: &str, content: &str| Snippet {
-        id: id.into(),
-        title: title.into(),
-        content: content.into(),
-    };
-    Data {
-        version: 1,
-        active_tab: Some("korean".into()),
-        theme: None,
-        tabs: vec![Tab {
-            id: "korean".into(),
-            name: "Korean Phrases".into(),
-            color: Some("#3b6fd9".into()),
-            snippets: vec![
-                s("hello", "Hello", "안녕하세요"),
-                s("good-work", "Good work", "수고하셨습니다"),
-                s("thank-you", "Thank you", "감사합니다"),
-            ],
-        }],
-    }
 }
 
 // ---------- storage ----------
@@ -96,18 +75,18 @@ fn write_data(path: &PathBuf, data: &Data) -> Result<(), String> {
     fs::rename(&tmp, path).map_err(|e| format!("Could not save {}: {e}", path.display()))
 }
 
+/// None on first run: the UI then creates a starter tab in the user's language and saves it.
 #[tauri::command]
-fn load_data(app: AppHandle) -> Result<Data, String> {
+fn load_data(app: AppHandle) -> Result<Option<Data>, String> {
     let path = data_file(&app)?;
     if !path.exists() {
-        let data = seed();
-        write_data(&path, &data)?;
-        return Ok(data);
+        return Ok(None);
     }
     let text = fs::read_to_string(&path)
         .map_err(|e| format!("Could not read {}: {e}", path.display()))?;
     // On a parse error we refuse to load rather than overwrite the user's file.
     serde_json::from_str(&text)
+        .map(Some)
         .map_err(|e| format!("{} is not valid ({e}). Fix or remove it and restart.", path.display()))
 }
 
@@ -244,11 +223,8 @@ fn display_stem(path: &FilePath) -> String {
         Some(i) if i > 0 => &base[..i],
         _ => base,
     };
-    if stem.trim().is_empty() {
-        "Imported".into()
-    } else {
-        stem.trim().into()
-    }
+    // Empty = unknown; the UI substitutes a translated "Imported".
+    stem.trim().into()
 }
 
 fn percent_decode(s: &str) -> String {
@@ -271,14 +247,18 @@ fn percent_decode(s: &str) -> String {
 }
 
 // These are async so they run off the main thread; the blocking file dialogs
-// would otherwise freeze the window.
+// would otherwise freeze the window. Titles come from the UI, already translated.
 #[tauri::command]
-async fn pick_import_file(app: AppHandle) -> Result<Option<ImportFile>, String> {
+async fn pick_import_file(
+    app: AppHandle,
+    title: Option<String>,
+    filter_name: Option<String>,
+) -> Result<Option<ImportFile>, String> {
     let Some(picked) = app
         .dialog()
         .file()
-        .set_title("Import tabs")
-        .add_filter("PhraseShelf export or text list", &["json", "txt"])
+        .set_title(title.as_deref().unwrap_or("Import tabs"))
+        .add_filter(filter_name.as_deref().unwrap_or("PhraseShelf export or text list"), &["json", "txt"])
         .blocking_pick_file()
     else {
         return Ok(None);
@@ -295,13 +275,19 @@ async fn pick_import_file(app: AppHandle) -> Result<Option<ImportFile>, String> 
 }
 
 #[tauri::command]
-async fn save_export(app: AppHandle, file_name: String, contents: String) -> Result<Option<String>, String> {
+async fn save_export(
+    app: AppHandle,
+    file_name: String,
+    contents: String,
+    title: Option<String>,
+    filter_name: Option<String>,
+) -> Result<Option<String>, String> {
     let Some(picked) = app
         .dialog()
         .file()
-        .set_title("Export tabs")
+        .set_title(title.as_deref().unwrap_or("Export tabs"))
         .set_file_name(&file_name)
-        .add_filter("PhraseShelf export", &["json"])
+        .add_filter(filter_name.as_deref().unwrap_or("PhraseShelf export"), &["json"])
         .blocking_save_file()
     else {
         return Ok(None);
@@ -375,6 +361,25 @@ fn build_tray(app: &tauri::App) -> tauri::Result<()> {
     Ok(())
 }
 
+/// Relabels the tray menu in the UI's language (the menu starts out in English).
+#[tauri::command]
+fn set_tray_labels(app: AppHandle, show: String, quit: String) -> Result<(), String> {
+    #[cfg(desktop)]
+    {
+        use tauri::menu::{Menu, MenuItem};
+        let tray = app.tray_by_id("main").ok_or("tray icon not found")?;
+        let show = MenuItem::with_id(&app, "show", &show, true, None::<&str>).map_err(|e| e.to_string())?;
+        let quit = MenuItem::with_id(&app, "quit", &quit, true, None::<&str>).map_err(|e| e.to_string())?;
+        let menu = Menu::with_items(&app, &[&show, &quit]).map_err(|e| e.to_string())?;
+        tray.set_menu(Some(menu)).map_err(|e| e.to_string())
+    }
+    #[cfg(mobile)]
+    {
+        let _ = (app, show, quit);
+        Ok(())
+    }
+}
+
 // ---------- entry point ----------
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -419,7 +424,8 @@ pub fn run() {
             platform,
             set_theme,
             check_update,
-            install_update
+            install_update,
+            set_tray_labels
         ])
         .run(tauri::generate_context!())
         .expect("error while running PhraseShelf");

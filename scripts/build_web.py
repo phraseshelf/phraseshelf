@@ -35,13 +35,18 @@ def main() -> None:
 
     shutil.copy2(UI / "styles.css", OUT)
     shutil.copy2(UI / "main.js", OUT)
+    shutil.copy2(UI / "i18n.js", OUT)
+    shutil.copytree(UI / "i18n", OUT / "i18n")
+    i18n_files = sorted(f"i18n/{p.name}" for p in (UI / "i18n").glob("*.json"))
     shutil.copytree(WEB / "icons", OUT / "icons")
     shutil.copy2(WEB / "favicon.png", OUT)
     shutil.copy2(WEB / "manifest.webmanifest", OUT)
     shutil.copy2(WEB / "privacy.html", OUT)
     for name in ("platform.js", "sw.js"):
-        text = (WEB / name).read_text("utf-8")
-        (OUT / name).write_text(text.replace(VERSION_MARK, version), "utf-8", newline="\n")
+        text = (WEB / name).read_text("utf-8").replace(VERSION_MARK, version)
+        # The offline cache lists every translation, so adding a language needs no edit here.
+        text = text.replace("/*__I18N_FILES__*/", "".join(f'"{f}", ' for f in i18n_files))
+        (OUT / name).write_text(text, "utf-8", newline="\n")
 
     html = (UI / "index.html").read_text("utf-8")
     main_tag = '<script src="main.js"></script>'
@@ -50,6 +55,7 @@ def main() -> None:
             raise SystemExit(f"ui/index.html: expected exactly one {marker!r}")
     # The CSS and JS get a version query so browsers fetch fresh copies after a release.
     html = html.replace('href="styles.css"', f'href="styles.css?v={version}"')
+    html = html.replace('<script src="i18n.js">', f'<script src="i18n.js?v={version}">')
     html = html.replace("</head>", HEAD_EXTRA + "</head>")
     html = html.replace(
         main_tag,

@@ -121,6 +121,17 @@ The APK is written to `dist\PhraseShelf-<version>-arm64.apk`. The script works a
 
 To build the installer, install the Tauri CLI once with `cargo install tauri-cli --version "^2" --locked`. Then run `cargo tauri build` in `src-tauri`. The installer is written to `src-tauri\target\release\bundle\nsis\`.
 
+## Languages
+
+PhraseShelf is available in **English, Français, Español, Português (Brasil), 한국어 and 日本語**. It follows your system language, and you can override it with the 🌐 picker in the toolbar. On first run, the starter tab is also in your language.
+
+**Help translate:** the translations live in [`ui/i18n/`](ui/i18n/), one JSON file per language. If something reads awkwardly in your language, please open an issue or a pull request. They were written with AI help and haven't all been reviewed by native speakers yet.
+
+To add a language:
+1. Copy `ui/i18n/en.json` to `ui/i18n/<code>.json` (for example `it.json` or `zh-TW.json`) and translate the values. Keep `{placeholders}` as they are. Entries with `one`/`other` are plural forms; use the forms your language needs (`zero`, `one`, `two`, `few`, `many`, `other`).
+2. Add the language to `LANGUAGES` in [`ui/i18n.js`](ui/i18n.js).
+3. Run `python scripts/check_i18n.py`, which lists anything missing or mistyped. CI runs it too.
+
 ## Code signing policy
 
 Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).

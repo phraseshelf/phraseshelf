@@ -11,28 +11,10 @@
   const KEY = "phraseshelf:data";
   const BACKUP_KEY = "phraseshelf:data.bak";
 
-  // Same starter tab as the desktop app.
-  const seed = () => ({
-    version: 1,
-    activeTab: "korean",
-    theme: null,
-    tabs: [
-      {
-        id: "korean",
-        name: "Korean Phrases",
-        color: "#3b6fd9",
-        snippets: [
-          { id: "hello", title: "Hello", content: "안녕하세요" },
-          { id: "good-work", title: "Good work", content: "수고하셨습니다" },
-          { id: "thank-you", title: "Thank you", content: "감사합니다" },
-        ],
-      },
-    ],
-  });
-
+  /** null on first visit: the UI then creates a starter tab in the user's language. */
   function loadData() {
     const raw = localStorage.getItem(KEY);
-    if (raw == null) return seed();
+    if (raw == null) return null;
     try {
       const data = JSON.parse(raw);
       if (data && Array.isArray(data.tabs)) return data;
@@ -48,9 +30,7 @@
       if (prev != null && prev !== json) localStorage.setItem(BACKUP_KEY, prev);
       localStorage.setItem(KEY, json);
     } catch (e) {
-      throw e && e.name === "QuotaExceededError"
-        ? "this browser's storage is full. Export your tabs to keep them safe."
-        : String(e);
+      throw e && e.name === "QuotaExceededError" ? t("web.storageFull") : String(e);
     }
   }
 
@@ -68,7 +48,7 @@
     ta.select();
     const ok = document.execCommand("copy");
     ta.remove();
-    if (!ok) throw "the browser blocked clipboard access. Check this site's Clipboard permission.";
+    if (!ok) throw t("web.clipboardBlocked");
   }
 
   /** Opens a file picker. Resolves to {name, text}, or null if cancelled. */
@@ -128,20 +108,16 @@
   // Ask the browser not to clear our storage when it's low on space (best effort).
   navigator.storage?.persist?.().catch(() => {});
 
-  // Desktop-only hints (tray, Ctrl+N) don't apply in a browser.
+  // Desktop-only hints (tray, Ctrl+N) don't apply in a browser; i18n.js fills in the text.
   const hint = document.querySelector(".hint-mouse");
-  if (hint) {
-    hint.textContent =
-      "Click to copy · Right-click or ✎ to edit · Drag to reorder (drop on a tab to move) · " +
-      "Saved only in this browser: use Export all… to back up";
-  }
+  if (hint) hint.dataset.i18n = "hint.mouseWeb";
 
   // A Privacy link beside the version number in the footer.
   const version = document.querySelector("#version");
   if (version) {
     const link = document.createElement("a");
     link.href = "privacy.html";
-    link.textContent = "Privacy";
+    link.dataset.i18n = "privacy";
     link.className = "version";
     link.style.cssText = "color:inherit;margin-left:10px";
     version.after(link);

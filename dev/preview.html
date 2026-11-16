@@ -42,13 +42,14 @@
     core: {
       invoke: async (cmd, args) => {
         switch (cmd) {
-          case "load_data": return structuredClone(store);
+          case "load_data": return location.search.includes("fresh") ? null : structuredClone(store); // ?fresh = first run
           case "save_data": __mock.saves++; __mock.last = args.data; return;
           case "copy_text": __mock.copied = args.text; return;
           case "pick_import_file": return __mock.importFile;
           case "save_export": __mock.exported = args; return "C:\\fake\\" + args.fileName;
           case "app_version": return "0.0.0-preview";
           case "set_theme": __mock.theme = args.theme; return;
+          case "set_tray_labels": __mock.tray = args; return;
           case "platform": return "desktop";
           // Set __mock.update = { version: "9.9.9" } (then click the version) to see the banner.
           case "check_update": return __mock.update ?? null;
@@ -65,10 +66,16 @@
     const doc = new DOMParser().parseFromString(html, "text/html");
     doc.querySelectorAll("script").forEach((s) => s.remove());
     document.body.innerHTML = doc.body.innerHTML;
-    const s = document.createElement("script");
-    s.src = "../ui/main.js?t=" + Date.now();
     document.querySelector('link[rel="stylesheet"]').href = "../ui/styles.css?t=" + Date.now();
-    document.body.append(s);
+    window.PHRASESHELF_I18N_BASE = "../ui/i18n/";
+    for (const name of ["i18n.js", "main.js"]) {
+      await new Promise((resolve) => {
+        const s = document.createElement("script");
+        s.src = `../ui/${name}?t=${Date.now()}`;
+        s.onload = resolve;
+        document.body.append(s);
+      });
+    }
   })();
 </script>
 </body>
