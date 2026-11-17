@@ -125,6 +125,16 @@
 
   // Works offline and can be installed ("Install app" / "Add to Home screen").
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    // When a new release's service worker takes over an already-open page, reload once so the
+    // page and its cached files come from the same version.
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloaded = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (hadController && !reloaded) {
+        reloaded = true;
+        location.reload();
+      }
+    });
     window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
   }
 })();
